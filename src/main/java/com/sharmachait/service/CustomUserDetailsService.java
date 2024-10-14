@@ -4,6 +4,7 @@ import com.sharmachait.model.entity.WazirUser;
 import com.sharmachait.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -26,8 +27,9 @@ public class CustomUserDetailsService implements UserDetailsService {
         WazirUser user = userRepository.findByEmail(username);
         if(user==null)
             throw new UsernameNotFoundException(username);
-        List<GrantedAuthority> authorities = new ArrayList<>();
 
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority(user.getRole()+""));
         return new User(user.getEmail(),user.getPassword(),authorities);
     }
 }
