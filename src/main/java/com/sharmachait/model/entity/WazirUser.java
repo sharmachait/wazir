@@ -1,4 +1,4 @@
-package com.sharmachait.model;
+package com.sharmachait.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;

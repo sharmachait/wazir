@@ -1,6 +1,5 @@
-package com.sharmachait.model;
+package com.sharmachait.model.entity;
 
-import jakarta.persistence.Entity;
 import lombok.Data;
 
 @Data

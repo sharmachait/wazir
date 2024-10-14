@@ -1,6 +1,6 @@
 package com.sharmachait.repository;
 
-import com.sharmachait.model.WazirUser;
+import com.sharmachait.model.entity.WazirUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

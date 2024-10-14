@@ -18,12 +18,12 @@ import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.util.List;
 
-public class JwtTokenValidator extends OncePerRequestFilter {
+public class JwtTokenValidatorFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String jwt = request.getHeader(JwtConstant.JWT_HEADER);
         //Bearer token
-        if(jwt!=null){
+        if(jwt!=null && jwt.length() < 8){
             jwt = jwt.substring(7);
             try{
                 SecretKey key = Keys.hmacShaKeyFor(JwtConstant.JWT_SECRET.getBytes());

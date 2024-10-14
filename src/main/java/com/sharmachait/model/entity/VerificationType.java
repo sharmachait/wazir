@@ -1,4 +1,4 @@
-package com.sharmachait.model;
+package com.sharmachait.model.entity;
 
 public enum VerificationType {
     MOBILE,

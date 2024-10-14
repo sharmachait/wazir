@@ -1,6 +1,6 @@
 package com.sharmachait.service;
 
-import com.sharmachait.model.WazirUser;
+import com.sharmachait.model.entity.WazirUser;
 import com.sharmachait.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
