@@ -1,7 +1,7 @@
 package com.sharmachait.service;
 
 import com.sharmachait.model.entity.WazirUser;
-import com.sharmachait.repository.UserRepository;
+import com.sharmachait.repository.WazirUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -20,11 +20,11 @@ import java.util.List;
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
     @Autowired
-    private UserRepository userRepository;
+    private WazirUserRepository wazirUserRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        WazirUser user = userRepository.findByEmail(username);
+        WazirUser user = wazirUserRepository.findByEmail(username);
         if(user==null)
             throw new UsernameNotFoundException(username);
 

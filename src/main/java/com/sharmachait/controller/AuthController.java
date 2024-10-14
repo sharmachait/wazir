@@ -3,10 +3,13 @@ package com.sharmachait.controller;
 import com.sharmachait.config.JwtProvider;
 import com.sharmachait.model.dto.LoginDto;
 import com.sharmachait.model.dto.RegisterDto;
+import com.sharmachait.model.entity.TwoFactorOtp;
 import com.sharmachait.model.entity.WazirUser;
 import com.sharmachait.model.response.AuthResponse;
-import com.sharmachait.repository.UserRepository;
+import com.sharmachait.repository.WazirUserRepository;
 import com.sharmachait.service.CustomUserDetailsService;
+import com.sharmachait.service.TwoFactorAuth.TwoFactorOtpService;
+import com.sharmachait.utils.OtpUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,16 +30,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 public class AuthController {
     @Autowired
-    private UserRepository userRepository;
+    private WazirUserRepository wazirUserRepository;
     @Autowired
     private CustomUserDetailsService userDetailsService;
     @Autowired
     private AuthenticationManager authManager;
     @Autowired
     private PasswordEncoder encoder;
+    @Autowired
+    TwoFactorOtpService twoFactorOtpService;
+
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterDto user) throws Exception {
-        WazirUser alreadyExists = userRepository.findByEmail(user.getEmail());
+        WazirUser alreadyExists = wazirUserRepository.findByEmail(user.getEmail());
         if(alreadyExists != null) {
             AuthResponse errorResponse = new AuthResponse();
             errorResponse.setMessage("Email already exists");
@@ -67,14 +73,17 @@ public class AuthController {
         authResponse.setMessage("User registered successfully");
 //        authResponse.setSession();
 //        authResponse.setTwoFactorAuthEnabled();
-        WazirUser savedUser = userRepository.save(newUser);
+        WazirUser savedUser = wazirUserRepository.save(newUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
     }
 
     @PostMapping("/signin")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginDto user) throws Exception {
-        String username = user.getEmail();
-        String password = user.getPassword();
+        WazirUser wazirUser = wazirUserRepository.findByEmail(user.getEmail());
+        if(wazirUser == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthResponse(null,false,"Unauthorized",false,null));
+        }
 
         Authentication auth;
         try{
@@ -95,13 +104,29 @@ public class AuthController {
             System.out.println(e.getMessage());
             throw new RuntimeException(e);
         }
-        AuthResponse authResponse = new AuthResponse();
-        authResponse.setJwt(jwt);
-        authResponse.setStatus(true);
-        authResponse.setMessage("Logged in successfully");
-//        authResponse.setSession();
-//        authResponse.setTwoFactorAuthEnabled();
-        return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
+        if(wazirUser.getTwoFactorAuth().isEnabled()) {
+            AuthResponse authResponse = new AuthResponse();
+            authResponse.setMessage("Two-factor authentication required");
+            authResponse.setTwoFactorAuthEnabled(true);
+            String otp = OtpUtils.generateOtp();
+            TwoFactorOtp old = twoFactorOtpService.findByUserId(wazirUser.getId());
+            if(old!=null)
+                twoFactorOtpService.deleteTwoFactorOtp(old);
+            TwoFactorOtp newTwoFactorOtp = twoFactorOtpService.createTwoFactorOtp(wazirUser,otp,jwt);
+
+            authResponse.setSession(newTwoFactorOtp.getId());
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(authResponse);
+        }
+        else{
+            AuthResponse authResponse = new AuthResponse();
+            authResponse.setJwt(jwt);
+            authResponse.setStatus(true);
+            authResponse.setMessage("Logged in successfully");
+//          authResponse.setSession();
+//          authResponse.setTwoFactorAuthEnabled();
+            return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
+        }
+
     }
 
     private Authentication authenticate(String username, String password) throws Exception {

@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface UserRepository extends JpaRepository<WazirUser, Long> {
+public interface WazirUserRepository extends JpaRepository<WazirUser, Long> {
     WazirUser findByEmail(String email);
 }
