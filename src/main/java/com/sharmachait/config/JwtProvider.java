@@ -36,7 +36,7 @@ public class JwtProvider {
     }
     public static String getEmailFromToken(String token) throws Exception {
         if(token==null || token.length() < 8)
-            return null;
+            throw new Exception("Invalid JWT token");
         String jwt = token.substring(7);
         try {
             SecretKey key = Keys.hmacShaKeyFor(JwtConstant.JWT_SECRET.getBytes());

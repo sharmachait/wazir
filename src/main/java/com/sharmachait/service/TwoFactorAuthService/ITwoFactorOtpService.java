@@ -1,4 +1,4 @@
-package com.sharmachait.service.TwoFactorAuth;
+package com.sharmachait.service.TwoFactorAuthService;
 
 import com.sharmachait.model.entity.TwoFactorOtp;
 import com.sharmachait.model.entity.WazirUser;

@@ -8,7 +8,8 @@ import com.sharmachait.model.entity.WazirUser;
 import com.sharmachait.model.response.AuthResponse;
 import com.sharmachait.repository.WazirUserRepository;
 import com.sharmachait.service.CustomUserDetailsService;
-import com.sharmachait.service.TwoFactorAuth.TwoFactorOtpService;
+import com.sharmachait.service.EmailService;
+import com.sharmachait.service.TwoFactorAuthService.TwoFactorOtpService;
 import com.sharmachait.utils.OtpUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,10 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
@@ -38,7 +36,9 @@ public class AuthController {
     @Autowired
     private PasswordEncoder encoder;
     @Autowired
-    TwoFactorOtpService twoFactorOtpService;
+    private TwoFactorOtpService twoFactorOtpService;
+    @Autowired
+    private EmailService emailService;
 
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterDto user) throws Exception {
@@ -113,7 +113,7 @@ public class AuthController {
             if(old!=null)
                 twoFactorOtpService.deleteTwoFactorOtp(old);
             TwoFactorOtp newTwoFactorOtp = twoFactorOtpService.createTwoFactorOtp(wazirUser,otp,jwt);
-
+            emailService.sendVerificationOtpEmail(wazirUser.getEmail(),otp);
             authResponse.setSession(newTwoFactorOtp.getId());
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(authResponse);
         }
@@ -138,5 +138,27 @@ public class AuthController {
             throw new BadCredentialsException("Bad credentials");
         }
         return new UsernamePasswordAuthenticationToken(userDetails, password, userDetails.getAuthorities());
+    }
+    @PostMapping("/twoFactorAuth/{otp}")
+    public ResponseEntity<AuthResponse> verifyTwoFactorOtp(
+            @PathVariable String otp
+            , @RequestParam String id
+    ) throws Exception {
+        TwoFactorOtp twoFactorOtp = twoFactorOtpService.findById(id);
+        if(twoFactorOtp == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthResponse(null,false,"Unauthorized",false,null));
+        }
+        if(twoFactorOtpService.verifyTwoFactorOtp(twoFactorOtp, otp)) {
+            AuthResponse authResponse = new AuthResponse();
+            authResponse.setMessage("Two-factor authentication verified");
+            authResponse.setTwoFactorAuthEnabled(true);
+            authResponse.setJwt(twoFactorOtp.getJwt());
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(authResponse);
+        }
+        else{
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthResponse(null,false,"Unauthorized",false,null));
+        }
     }
 }
