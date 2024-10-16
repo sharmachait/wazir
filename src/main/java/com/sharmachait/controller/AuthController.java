@@ -65,7 +65,8 @@ public class AuthController {
              jwt = JwtProvider.generateToken(auth);
         } catch (Exception e) {
             System.out.println(e.getMessage());
-            throw new RuntimeException(e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthResponse(null,false,"Unauthorized",false,null));
         }
         AuthResponse authResponse = new AuthResponse();
         authResponse.setJwt(jwt);
@@ -102,7 +103,8 @@ public class AuthController {
             jwt = JwtProvider.generateToken(auth);
         } catch (Exception e) {
             System.out.println(e.getMessage());
-            throw new RuntimeException(e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthResponse(null,false,"Unauthorized",false,null));
         }
         if(wazirUser.getTwoFactorAuth().isEnabled()) {
             AuthResponse authResponse = new AuthResponse();
@@ -143,7 +145,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> verifyTwoFactorOtp(
             @PathVariable String otp
             , @RequestParam String id
-    ) throws Exception {
+    )  {
         TwoFactorOtp twoFactorOtp = twoFactorOtpService.findById(id);
         if(twoFactorOtp == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
