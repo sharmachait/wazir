@@ -1,15 +1,17 @@
 package com.sharmachait.controller;
 
+import com.sharmachait.config.JwtConstant;
 import com.sharmachait.config.JwtProvider;
 import com.sharmachait.model.dto.LoginDto;
 import com.sharmachait.model.dto.RegisterDto;
-import com.sharmachait.model.entity.TwoFactorOtp;
-import com.sharmachait.model.entity.WazirUser;
+import com.sharmachait.model.entity.*;
 import com.sharmachait.model.response.AuthResponse;
 import com.sharmachait.repository.WazirUserRepository;
 import com.sharmachait.service.CustomUserDetailsService;
 import com.sharmachait.service.EmailService;
+import com.sharmachait.service.ForgotPasswordService.ForgotPasswordService;
 import com.sharmachait.service.TwoFactorAuthService.TwoFactorOtpService;
+import com.sharmachait.service.UserService.UserService;
 import com.sharmachait.utils.OtpUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -36,9 +40,13 @@ public class AuthController {
     @Autowired
     private PasswordEncoder encoder;
     @Autowired
+    private ForgotPasswordService forgotPasswordService;
+    @Autowired
     private TwoFactorOtpService twoFactorOtpService;
     @Autowired
     private EmailService emailService;
+    @Autowired
+    private UserService userService;
 
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterDto user) throws Exception {
@@ -161,6 +169,36 @@ public class AuthController {
         else{
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthResponse(null,false,"Unauthorized",false,null));
+        }
+    }
+
+    @PostMapping("/forgotpassword/requestchange")
+    public ResponseEntity<String> requestResetPassword(
+            @RequestHeader(JwtConstant.JWT_HEADER) String jwtHeader
+            ){
+        try{
+            WazirUser user = userService.findUserByJwt(jwtHeader);
+            String otp = OtpUtils.generateOtp();
+            String id = UUID.randomUUID().toString();
+            String sendTo = user.getEmail();
+            if(user.getTwoFactorAuth().getSendTo().equals(VerificationType.MOBILE))
+                sendTo = user.getMobile();
+
+            ForgotPasswordToken oldToken = forgotPasswordService.findByUserId(user.getId());
+            if(oldToken!=null) {
+                forgotPasswordService.deleteToken(oldToken);
+            }
+            ForgotPasswordToken token = forgotPasswordService.createToken(
+                                                                user,
+                                                                id,
+                                                                otp,
+                                                                user.getTwoFactorAuth().getSendTo(),
+                                                                sendTo);
+            return ResponseEntity.ok("Otp sent successfully!");
+        } catch (Exception e) {
+            //handle
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Bad request");
         }
     }
 }

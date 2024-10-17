@@ -15,6 +15,8 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -35,11 +37,13 @@ public class UserController {
     private VerificationCodeService verificationCodeService;
 
     @GetMapping("/profile")
-    public ResponseEntity<?> getUserProfile(@RequestHeader(JwtConstant.JWT_HEADER) String jwtHeader){
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<?> getUserProfile(@RequestHeader(JwtConstant.JWT_HEADER) String jwtHeader, Authentication auth){
         try{
             WazirUser user =userService.findUserByJwt(jwtHeader);
             UserDto userDto = modelMapper.map(user, UserDto.class);
-
+            System.out.println(auth.getName());
+            System.out.println(auth.getAuthorities());
             return ResponseEntity.ok(userDto);
         } catch (Exception e) {
             //handle
@@ -107,4 +111,7 @@ public class UserController {
                     .body("Bad request");
         }
     }
+
+
+
 }
