@@ -174,13 +174,14 @@ public class AuthController {
 
     @PostMapping("/forgotpassword/requestchange")
     public ResponseEntity<String> requestResetPassword(
-            @RequestHeader(JwtConstant.JWT_HEADER) String jwtHeader
+            @RequestBody String email
             ){
         try{
-            WazirUser user = userService.findUserByJwt(jwtHeader);
+            WazirUser user = userService.findUserByEmail(email);
             String otp = OtpUtils.generateOtp();
             String id = UUID.randomUUID().toString();
             String sendTo = user.getEmail();
+
             if(user.getTwoFactorAuth().getSendTo().equals(VerificationType.MOBILE))
                 sendTo = user.getMobile();
 
@@ -194,7 +195,69 @@ public class AuthController {
                                                                 otp,
                                                                 user.getTwoFactorAuth().getSendTo(),
                                                                 sendTo);
+            if(user.getTwoFactorAuth().getSendTo().equals(VerificationType.EMAIL)) {
+                emailService.sendVerificationOtpEmail(sendTo,otp);
+            }
             return ResponseEntity.ok("Otp sent successfully!");
+        } catch (Exception e) {
+            //handle
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Bad request");
+        }
+    }
+
+    @PatchMapping("/forgotpassword/verify")
+    public ResponseEntity<String> verifyResetPassword(
+            @RequestBody String email,
+            @RequestBody String otp
+    ){
+        try{
+            WazirUser user = userService.findUserByEmail(email);
+            ForgotPasswordToken oldToken = forgotPasswordService.findByUserId(user.getId());
+            if(oldToken==null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Bad request");
+            }
+
+            boolean isVerified = forgotPasswordService.verifyForgotPasswordToken(oldToken,otp);
+
+            if(isVerified) {
+                return ResponseEntity.ok("Otp verified successfully!");
+            }else{
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Bad request");
+            }
+        } catch (Exception e) {
+            //handle
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Bad request");
+        }
+    }
+
+    @PatchMapping("/forgotpassword/reset")
+    public ResponseEntity<String> resetPassword(
+            @RequestBody String email,
+            @RequestBody String newPassword,
+            @RequestBody String otp
+    ){
+        try{
+            WazirUser user = userService.findUserByEmail(email);
+            ForgotPasswordToken oldToken = forgotPasswordService.findByUserId(user.getId());
+            if(oldToken==null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Bad request");
+            }
+
+            boolean isVerified = forgotPasswordService.verifyForgotPasswordToken(oldToken,otp);
+
+            if(isVerified) {
+                userService.updatePassword(user,newPassword);
+                forgotPasswordService.deleteToken(oldToken);
+                return ResponseEntity.ok("Otp verified successfully! Password updated!");
+            }else{
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Bad request");
+            }
         } catch (Exception e) {
             //handle
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
